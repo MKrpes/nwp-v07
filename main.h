@@ -22,6 +22,7 @@ class main_window : public vsite::nwp::window {
 public:
 	Image* img;
 	std::wstring fileName;
+	int timer{ 0 };
 	UINT frameCount = 1;
 	UINT currentFrame = 0;
 	UINT frameDelay = 0;
@@ -31,8 +32,17 @@ public:
 			currentFrame = (currentFrame + 1) % frameCount;
 			img->SelectActiveFrame(&FrameDimensionTime, currentFrame);
 			lastFrameTime = GetTickCount64();
-			InvalidateRect(*this, NULL, false);
 		}
+	}
+	UINT getFPS(){
+		UINT totalDuration = 0;
+		UINT size = img->GetPropertyItemSize(PropertyTagFrameDelay);
+		PropertyItem* propertyItem = (PropertyItem*)malloc(size);
+		img->GetPropertyItem(PropertyTagFrameDelay, size, propertyItem);
+		for (UINT i = 0; i < frameCount; ++i) {
+			totalDuration += ((UINT*)propertyItem->value)[i] * 10; 
+		}
+		return totalDuration / frameCount;
 	}
 	bool isGIF(const TCHAR* filePath) {
 		const TCHAR* dot = _tcsrchr(filePath, _T('.'));
@@ -48,6 +58,7 @@ public:
 protected:
 	void on_paint(HDC hdc) override;
 	void on_command(int id) override;
+	virtual void on_timer(int id) override;
 	void on_destroy() override;
 private:
 	bool isGif = false;
