@@ -2,21 +2,18 @@
 #include "rc.h"
 #include <filesystem>
 #include<string>
-#include <iostream>
-
-using namespace Gdiplus;
-
-
 
 
 void main_window::on_paint(HDC hdc) 
 {
-	RECT rc;
-	GetClientRect(*this, &rc);
-	Graphics graphics(hdc);
-	//HDC memDC = CreateCompatibleDC(hdc);
-	Pen pen(Color(255, 255, 0, 0), 2);
-	Gdiplus::RectF displayRect(rc.left, rc.top, rc.right, rc.bottom);
+	RECT rect;
+	GetClientRect(*this, &rect);
+	Gdiplus::RectF displayRect(rect.left, rect.top, rect.right, rect.bottom);
+	HDC memDC = CreateCompatibleDC(hdc);
+	HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
+	SelectObject(memDC, memBitmap);
+
+	Graphics graphics(memDC);
 	graphics.DrawImage(img, displayRect);
 
 	Gdiplus::StringFormat t;
@@ -26,14 +23,15 @@ void main_window::on_paint(HDC hdc)
 	Gdiplus::SolidBrush tForm(Gdiplus::Color::Black);
 	graphics.DrawString(fileName.c_str(), -1, &font, displayRect, &t, &tForm);
 
-
-	displayRect.Width = rc.right - 5;
-	displayRect.Height = rc.bottom - 5;
+	displayRect.Width = rect.right - 5;
+	displayRect.Height = rect.bottom - 5;
 	tForm.SetColor(Gdiplus::Color::White);
 	graphics.DrawString(fileName.c_str(), -1, &font, displayRect, &t, &tForm);
-	if (img != NULL && isGif) {
-		AdvanceToNextFrame();
-	}
+
+	BitBlt(hdc, 0, 0, rect.right, rect.bottom, memDC, 0, 0, SRCCOPY);
+
+	DeleteObject(memBitmap);
+	DeleteDC(memDC);
 }
 
 void main_window::on_command(int id) 
@@ -59,8 +57,7 @@ void main_window::on_command(int id)
 			fileName = std::filesystem::path(path).filename();
 			if (isGIF(path)) {
 				frameCount = img->GetFrameCount(&FrameDimensionTime);
-
-				::SetTimer(*this, 1, getFPS(), 0);
+				::SetTimer(*this, 1, frameDelay, 0);
 			}
 		}
 		break;
@@ -73,6 +70,7 @@ void main_window::on_command(int id)
 }
 void main_window::on_timer(int id)
 {
+	AdvanceToNextFrame();
 	InvalidateRect(*this, NULL, false);
 }
 

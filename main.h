@@ -34,16 +34,6 @@ public:
 			lastFrameTime = GetTickCount64();
 		}
 	}
-	UINT getFPS(){
-		UINT totalDuration = 0;
-		UINT size = img->GetPropertyItemSize(PropertyTagFrameDelay);
-		PropertyItem* propertyItem = (PropertyItem*)malloc(size);
-		img->GetPropertyItem(PropertyTagFrameDelay, size, propertyItem);
-		for (UINT i = 0; i < frameCount; ++i) {
-			totalDuration += ((UINT*)propertyItem->value)[i] * 10; 
-		}
-		return totalDuration / frameCount;
-	}
 	bool isGIF(const TCHAR* filePath) {
 		const TCHAR* dot = _tcsrchr(filePath, _T('.'));
 		if (_tcsicmp(dot, _T(".gif")) == 0) {
