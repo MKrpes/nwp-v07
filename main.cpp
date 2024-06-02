@@ -2,7 +2,7 @@
 #include "rc.h"
 #include <filesystem>
 #include<string>
-
+using tstring = std::basic_string<TCHAR>;
 
 void main_window::on_paint(HDC hdc) 
 {
@@ -13,8 +13,8 @@ void main_window::on_paint(HDC hdc)
 	HBITMAP memBitmap = CreateCompatibleBitmap(hdc, rect.right, rect.bottom);
 	SelectObject(memDC, memBitmap);
 
-	Graphics graphics(memDC);
-	graphics.DrawImage(img, displayRect);
+	Gdiplus::Graphics graphics(memDC);
+	graphics.DrawImage(img.get(), displayRect);
 
 	Gdiplus::StringFormat t;
 	t.SetAlignment(Gdiplus::StringAlignmentCenter);
@@ -40,10 +40,6 @@ void main_window::on_command(int id)
 	{
 	case ID_OPEN:
 	{
-		if (timer > 0) {
-			::KillTimer(*this, 1);
-			timer = 0;
-		}
 		TCHAR path[MAX_PATH]; *path = 0;
 		TCHAR filter[] = _T("Image Files (*.jpg;*.jpeg;*.png;*.gif;*.tiff;*.bmp;*.emf)\0*.jpg;*.jpeg;*.png;*.gif;*.tiff;*.bmp;*.emf\0All Files (*.*)\0*.*\0");
 		OPENFILENAME ofn{ sizeof OPENFILENAME };
@@ -53,11 +49,16 @@ void main_window::on_command(int id)
 		ofn.lpstrFilter = filter;
 		ofn.Flags = OFN_HIDEREADONLY;
 		if (::GetOpenFileName(&ofn)) {
-			img = Image::FromFile(path);
+			if (timer > 0) {
+				::KillTimer(*this, 1);
+				timer = 0;
+			}
+			img = std::make_unique<Gdiplus::Image>(path);
 			fileName = std::filesystem::path(path).filename();
 			if (isGIF(path)) {
-				frameCount = img->GetFrameCount(&FrameDimensionTime);
-				::SetTimer(*this, 1, frameDelay, 0);
+				frameCount = img->GetFrameCount(&Gdiplus::FrameDimensionTime);
+				::SetTimer(*this, 1, getFPS(), 0);
+				timer = 1;
 			}
 		}
 		break;

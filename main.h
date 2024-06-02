@@ -3,7 +3,6 @@
 #include "nwpwin.h"
 
 #include <gdiplus.h>
-using namespace Gdiplus;
 
 class gdiplus_application : public vsite::nwp::application
 {
@@ -20,19 +19,15 @@ public:
 
 class main_window : public vsite::nwp::window {
 public:
-	Image* img;
+	std::unique_ptr<Gdiplus::Image> img;
 	std::wstring fileName;
 	int timer{ 0 };
 	UINT frameCount = 1;
 	UINT currentFrame = 0;
-	UINT frameDelay = 0;
-	UINT lastFrameTime = 0;
+
 	void AdvanceToNextFrame() {
-		if (GetTickCount64() - lastFrameTime > frameDelay) {
 			currentFrame = (currentFrame + 1) % frameCount;
-			img->SelectActiveFrame(&FrameDimensionTime, currentFrame);
-			lastFrameTime = GetTickCount64();
-		}
+			img->SelectActiveFrame(&Gdiplus::FrameDimensionTime, currentFrame);
 	}
 	bool isGIF(const TCHAR* filePath) {
 		const TCHAR* dot = _tcsrchr(filePath, _T('.'));
@@ -44,6 +39,17 @@ public:
 			isGif = false;
 			return false;
 		}
+	}
+	UINT getFPS() {
+		UINT totalDuration = 0;
+		UINT size = img->GetPropertyItemSize(PropertyTagFrameDelay);
+		Gdiplus::PropertyItem* propertyItem = (Gdiplus::PropertyItem*)malloc(size);
+		img->GetPropertyItem(PropertyTagFrameDelay, size, propertyItem);
+		for (UINT i = 0; i < frameCount; ++i) {
+			totalDuration += ((UINT*)propertyItem->value)[i] * 10;
+		}
+		free(propertyItem);
+		return totalDuration / frameCount;
 	}
 protected:
 	void on_paint(HDC hdc) override;
